@@ -1,0 +1,13 @@
+export { default as HomePage } from './HomePage';
+export { default as LoginPage } from './LoginPage';
+export { default as RegisterPage } from './RegisterPage';
+export { default as ProfilePage } from './ProfilePage';
+export { default as BookingPage } from './BookingPage';
+export { default as PartsPage } from './PartsPage';
+export { default as CartPage } from './CartPage';
+export { default as MasterDashboard } from './MasterDashboard';
+export { default as AdminDashboard } from './AdminDashboard';
+export { default as AboutPage } from './AboutPage';
+export { default as ContactPage } from './ContactPage';
+export { default as ForgotPasswordPage } from './ForgotPasswordPage';
+export { default as NotFoundPage } from './NotFoundPage'; 
