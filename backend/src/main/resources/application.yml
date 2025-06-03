@@ -1,0 +1,96 @@
+spring:
+  application:
+    name: supersto-backend
+  
+  profiles:
+    active: dev
+  
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: supersto
+      auto-index-creation: true
+  
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+  
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+server:
+  port: 8081
+  servlet:
+    context-path: /api
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    ru.supersto: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.data.mongodb: DEBUG
+  pattern:
+    file: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/supersto-backend.log
+
+jwt:
+  secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890123456789012345678901234567890}
+  expiration: 86400000 # 24 hours
+  refresh-expiration: 604800000 # 7 days
+
+app:
+  cors:
+    allowed-origins: 
+      - http://localhost:3000
+      - http://localhost:3001
+  upload:
+    path: ${UPLOAD_PATH:./uploads}
+    max-file-size: 10MB
+
+---
+# Профиль для разработки
+spring:
+  config:
+    activate:
+      on-profile: dev
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/supersto_dev
+  logging:
+    level:
+      ru.supersto: DEBUG
+
+---
+# Профиль для тестирования  
+spring:
+  config:
+    activate:
+      on-profile: test
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/supersto_test 

@@ -236,7 +236,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               {/* Photos */}
               {review.photos && review.photos.length > 0 && (
                 <div className="flex space-x-2 mb-4">
-                  {review.photos.map((photo, index) => (
+                  {review.photos.map((photo: string, index: number) => (
                     <div key={index} className="w-20 h-20 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
                       <PhotoIcon className="h-8 w-8 text-gray-400" />
                     </div>

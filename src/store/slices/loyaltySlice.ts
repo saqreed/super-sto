@@ -1,182 +1,122 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { LoyaltyAccount, LoyaltyTransaction, LoyaltyTier, Promotion } from '../../types';
+import { apiClient } from '../../api/client';
 
-interface LoyaltyState {
-  account: LoyaltyAccount | null;
+export interface LoyaltyTransaction {
+  id: string;
+  userId: string;
+  type: 'EARNED' | 'SPENT' | 'EXPIRED' | 'BONUS';
+  points: number;
+  description: string;
+  appointmentId?: string;
+  orderId?: string;
+  expiryDate?: string;
+  createdAt: string;
+}
+
+export interface LoyaltyState {
+  level: 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
+  points: number;
   transactions: LoyaltyTransaction[];
-  promotions: Promotion[];
+  levelBenefits: {
+    [key: string]: {
+      discountPercent: number;
+      bonusMultiplier: number;
+      description: string;
+    };
+  };
   loading: boolean;
   error: string | null;
 }
 
 const initialState: LoyaltyState = {
-  account: null,
+  level: 'BRONZE',
+  points: 0,
   transactions: [],
-  promotions: [],
+  levelBenefits: {
+    BRONZE: {
+      discountPercent: 0,
+      bonusMultiplier: 1,
+      description: 'Базовый уровень - накопление баллов с каждой услуги',
+    },
+    SILVER: {
+      discountPercent: 5,
+      bonusMultiplier: 1.2,
+      description: 'Скидка 5% на все услуги, ускоренное накопление баллов',
+    },
+    GOLD: {
+      discountPercent: 10,
+      bonusMultiplier: 1.5,
+      description: 'Скидка 10% на все услуги, приоритетная запись',
+    },
+    PLATINUM: {
+      discountPercent: 15,
+      bonusMultiplier: 2,
+      description: 'Скидка 15%, VIP обслуживание, персональный мастер',
+    },
+  },
   loading: false,
   error: null,
 };
 
-// Mock data
-const mockAccount: LoyaltyAccount = {
-  id: '1',
-  userId: '1',
-  points: 1250,
-  totalEarned: 3500,
-  totalSpent: 2250,
-  tier: LoyaltyTier.SILVER,
-  createdAt: new Date('2024-01-01T00:00:00'),
-  updatedAt: new Date('2024-01-15T12:00:00'),
-};
-
-const mockTransactions: LoyaltyTransaction[] = [
-  {
-    id: '1',
-    accountId: '1',
-    type: 'earn',
-    points: 150,
-    description: 'Бонус за заказ услуги "Замена масла"',
-    relatedOrderId: '1',
-    createdAt: new Date('2024-01-15T12:00:00'),
-  },
-  {
-    id: '2',
-    accountId: '1',
-    type: 'spend',
-    points: 500,
-    description: 'Скидка на покупку деталей',
-    relatedOrderId: '2',
-    createdAt: new Date('2024-01-10T14:30:00'),
-  },
-  {
-    id: '3',
-    accountId: '1',
-    type: 'earn',
-    points: 200,
-    description: 'Бонус за отзыв',
-    createdAt: new Date('2024-01-08T16:00:00'),
-  },
-];
-
-const mockPromotions: Promotion[] = [
-  {
-    id: '1',
-    title: 'Скидка 10% на диагностику',
-    description: 'Получите скидку 10% на любую диагностику при заказе от 3000 рублей',
-    type: 'discount',
-    value: 10,
-    minOrderAmount: 3000,
-    validFrom: new Date('2024-01-01T00:00:00'),
-    validTo: new Date('2024-02-29T23:59:59'),
-    isActive: true,
-    usageLimit: 100,
-    usedCount: 23,
-    applicableServices: ['2'],
-    applicableTiers: [LoyaltyTier.SILVER, LoyaltyTier.GOLD, LoyaltyTier.PLATINUM],
-  },
-  {
-    id: '2',
-    title: 'Двойные баллы за ТО',
-    description: 'Получайте двойные баллы за техническое обслуживание',
-    type: 'bonus_points',
-    value: 2,
-    validFrom: new Date('2024-01-15T00:00:00'),
-    validTo: new Date('2024-01-31T23:59:59'),
-    isActive: true,
-    usageLimit: 50,
-    usedCount: 12,
-    applicableServices: ['1'],
-    applicableTiers: [LoyaltyTier.GOLD, LoyaltyTier.PLATINUM],
-  },
-];
-
-export const fetchLoyaltyAccount = createAsyncThunk(
-  'loyalty/fetchAccount',
-  async (userId: string) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockAccount;
+// Загрузка данных лояльности из профиля пользователя
+export const fetchLoyaltyData = createAsyncThunk(
+  'loyalty/fetchLoyaltyData',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.get('/users/profile');
+      return {
+        level: response.data.loyaltyLevel || 'BRONZE',
+        points: response.data.loyaltyPoints || 0
+      };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Ошибка загрузки данных лояльности');
+    }
   }
 );
 
+// Получение истории транзакций (TODO: когда backend добавит LoyaltyController)
 export const fetchLoyaltyTransactions = createAsyncThunk(
   'loyalty/fetchTransactions',
-  async (accountId: string) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockTransactions.filter(t => t.accountId === accountId);
-  }
-);
-
-export const fetchPromotions = createAsyncThunk(
-  'loyalty/fetchPromotions',
-  async (tier?: LoyaltyTier) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    let filteredPromotions = mockPromotions.filter(p => p.isActive);
-    
-    if (tier) {
-      filteredPromotions = filteredPromotions.filter(p => 
-        !p.applicableTiers || p.applicableTiers.includes(tier)
-      );
+  async () => {
+    try {
+      // Пока backend не готов, используем пустой массив
+      // TODO: Когда backend добавит endpoint /loyalty/transactions
+      // const response = await apiClient.get('/loyalty/transactions');
+      // return response.data;
+      
+      return [];
+    } catch (error: any) {
+      throw new Error('Ошибка загрузки истории транзакций');
     }
-    
-    return filteredPromotions;
   }
 );
 
-export const earnPoints = createAsyncThunk(
-  'loyalty/earnPoints',
-  async (data: {
-    accountId: string;
-    points: number;
-    description: string;
-    relatedOrderId?: string;
-  }) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const transaction: LoyaltyTransaction = {
-      id: Date.now().toString(),
-      accountId: data.accountId,
-      type: 'earn',
-      points: data.points,
-      description: data.description,
-      relatedOrderId: data.relatedOrderId,
-      createdAt: new Date(),
-    };
-    
-    return transaction;
-  }
-);
-
-export const spendPoints = createAsyncThunk(
+// Трата баллов (TODO: когда backend добавит endpoint)
+export const spendLoyaltyPoints = createAsyncThunk(
   'loyalty/spendPoints',
-  async (data: {
-    accountId: string;
-    points: number;
-    description: string;
-    relatedOrderId?: string;
-  }) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const transaction: LoyaltyTransaction = {
-      id: Date.now().toString(),
-      accountId: data.accountId,
-      type: 'spend',
-      points: data.points,
-      description: data.description,
-      relatedOrderId: data.relatedOrderId,
-      createdAt: new Date(),
-    };
-    
-    return transaction;
+  async (params: { points: number; description: string; appointmentId?: string }) => {
+    try {
+      // TODO: Когда backend добавит endpoint /loyalty/spend
+      // const response = await apiClient.post('/loyalty/spend', params);
+      // return response.data;
+      
+      // Пока возвращаем успешную транзакцию
+      const newTransaction: LoyaltyTransaction = {
+        id: Date.now().toString(),
+        userId: 'current-user',
+        type: 'SPENT',
+        points: params.points,
+        description: params.description,
+        appointmentId: params.appointmentId,
+        createdAt: new Date().toISOString(),
+      };
+      
+      return newTransaction;
+    } catch (error: any) {
+      throw new Error('Ошибка списания баллов');
+    }
   }
 );
-
-const getTierFromPoints = (totalEarned: number): LoyaltyTier => {
-  if (totalEarned >= 10000) return LoyaltyTier.PLATINUM;
-  if (totalEarned >= 5000) return LoyaltyTier.GOLD;
-  if (totalEarned >= 2000) return LoyaltyTier.SILVER;
-  return LoyaltyTier.BRONZE;
-};
 
 const loyaltySlice = createSlice({
   name: 'loyalty',
@@ -185,48 +125,36 @@ const loyaltySlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    // Локальное обновление баллов (когда получаем обновленный профиль)
+    updateLoyaltyInfo: (state, action) => {
+      state.level = action.payload.level;
+      state.points = action.payload.points;
+    },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchLoyaltyAccount.pending, (state) => {
+      .addCase(fetchLoyaltyData.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchLoyaltyAccount.fulfilled, (state, action) => {
+      .addCase(fetchLoyaltyData.fulfilled, (state, action) => {
         state.loading = false;
-        state.account = action.payload;
+        state.level = action.payload.level;
+        state.points = action.payload.points;
       })
-      .addCase(fetchLoyaltyAccount.rejected, (state, action) => {
+      .addCase(fetchLoyaltyData.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Ошибка загрузки аккаунта лояльности';
+        state.error = action.error.message || 'Ошибка загрузки данных лояльности';
       })
       .addCase(fetchLoyaltyTransactions.fulfilled, (state, action) => {
         state.transactions = action.payload;
       })
-      .addCase(fetchPromotions.fulfilled, (state, action) => {
-        state.promotions = action.payload;
-      })
-      .addCase(earnPoints.fulfilled, (state, action) => {
+      .addCase(spendLoyaltyPoints.fulfilled, (state, action) => {
         state.transactions.unshift(action.payload);
-        
-        if (state.account) {
-          state.account.points += action.payload.points;
-          state.account.totalEarned += action.payload.points;
-          state.account.tier = getTierFromPoints(state.account.totalEarned);
-          state.account.updatedAt = new Date();
-        }
-      })
-      .addCase(spendPoints.fulfilled, (state, action) => {
-        state.transactions.unshift(action.payload);
-        
-        if (state.account) {
-          state.account.points -= action.payload.points;
-          state.account.totalSpent += action.payload.points;
-          state.account.updatedAt = new Date();
-        }
+        state.points = Math.max(0, state.points - action.payload.points);
       });
   },
 });
 
-export const { clearError } = loyaltySlice.actions;
+export const { clearError, updateLoyaltyInfo } = loyaltySlice.actions;
 export default loyaltySlice.reducer; 

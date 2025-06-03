@@ -32,7 +32,7 @@ const PartsPage: React.FC = () => {
       return;
     }
 
-    dispatch(addToCart(part));
+    dispatch(addToCart({ part }));
     dispatch(addNotification({
       userId: user.id,
       title: 'Товар добавлен',

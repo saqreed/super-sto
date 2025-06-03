@@ -1,9 +1,12 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { Part } from '../../types';
+import { partsAPI } from '../../api/parts';
 
 interface PartsState {
   parts: Part[];
   filteredParts: Part[];
+  categories: string[];
+  brands: string[];
   loading: boolean;
   error: string | null;
   searchQuery: string;
@@ -14,6 +17,8 @@ interface PartsState {
 const initialState: PartsState = {
   parts: [],
   filteredParts: [],
+  categories: [],
+  brands: [],
   loading: false,
   error: null,
   searchQuery: '',
@@ -21,66 +26,75 @@ const initialState: PartsState = {
   selectedBrand: '',
 };
 
-const mockParts: Part[] = [
-  {
-    id: '1',
-    name: 'Масляный фильтр',
-    description: 'Оригинальный масляный фильтр для двигателя',
-    price: 850,
-    brand: 'Bosch',
-    model: 'F026407006',
-    article: 'F026407006',
-    category: 'Фильтры',
-    images: ['/images/oil-filter.jpg'],
-    inStock: true,
-    quantity: 25,
-  },
-  {
-    id: '2',
-    name: 'Тормозные колодки передние',
-    description: 'Керамические тормозные колодки',
-    price: 3200,
-    brand: 'Brembo',
-    model: 'P85020',
-    article: 'P85020',
-    category: 'Тормозная система',
-    images: ['/images/brake-pads.jpg'],
-    inStock: true,
-    quantity: 12,
-  },
-  {
-    id: '3',
-    name: 'Свечи зажигания',
-    description: 'Иридиевые свечи зажигания (комплект 4 шт)',
-    price: 2400,
-    brand: 'NGK',
-    model: 'ILFR6A',
-    article: 'ILFR6A',
-    category: 'Система зажигания',
-    images: ['/images/spark-plugs.jpg'],
-    inStock: true,
-    quantity: 8,
-  },
-  {
-    id: '4',
-    name: 'Воздушный фильтр',
-    description: 'Воздушный фильтр двигателя',
-    price: 650,
-    brand: 'Mann',
-    model: 'C25114',
-    article: 'C25114',
-    category: 'Фильтры',
-    images: ['/images/air-filter.jpg'],
-    inStock: false,
-    quantity: 0,
-  },
-];
-
 export const fetchParts = createAsyncThunk(
   'parts/fetchParts',
+  async (params?: { category?: string; search?: string; brand?: string }) => {
+    try {
+      if (params?.search) {
+        return await partsAPI.search(params.search);
+      }
+      if (params?.category) {
+        return await partsAPI.getByCategory(params.category);
+      }
+      return await partsAPI.getAll(params);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Ошибка загрузки запчастей');
+    }
+  }
+);
+
+export const fetchPartById = createAsyncThunk(
+  'parts/fetchPartById',
+  async (id: string) => {
+    try {
+      return await partsAPI.getById(id);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Ошибка загрузки запчасти');
+    }
+  }
+);
+
+export const fetchPartCategories = createAsyncThunk(
+  'parts/fetchCategories',
   async () => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    return mockParts;
+    try {
+      return await partsAPI.getCategories();
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Ошибка загрузки категорий');
+    }
+  }
+);
+
+export const searchParts = createAsyncThunk(
+  'parts/searchParts',
+  async (query: string) => {
+    try {
+      return await partsAPI.search(query);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Ошибка поиска запчастей');
+    }
+  }
+);
+
+export const checkPartAvailability = createAsyncThunk(
+  'parts/checkAvailability',
+  async ({ partId, stationId }: { partId: string; stationId: string }) => {
+    try {
+      return await partsAPI.checkAvailability(partId, stationId);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Ошибка проверки наличия');
+    }
+  }
+);
+
+export const orderPart = createAsyncThunk(
+  'parts/orderPart',
+  async (orderData: any) => {
+    try {
+      return await partsAPI.order(orderData);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Ошибка заказа запчасти');
+    }
   }
 );
 
@@ -106,20 +120,72 @@ const partsSlice = createSlice({
       state.selectedBrand = '';
       state.filteredParts = state.parts;
     },
+    clearError: (state) => {
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     builder
       .addCase(fetchParts.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(fetchParts.fulfilled, (state, action) => {
         state.loading = false;
         state.parts = action.payload;
-        state.filteredParts = action.payload;
+        state.filteredParts = filterParts(action.payload, state.searchQuery, state.selectedCategory, state.selectedBrand);
+        
+        // Extract unique brands from parts
+        const brands: string[] = [...new Set<string>(action.payload.map((part: Part) => part.brand))];
+        state.brands = brands;
       })
       .addCase(fetchParts.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Ошибка загрузки деталей';
+        state.error = action.error.message || 'Ошибка загрузки запчастей';
+      })
+      .addCase(fetchPartById.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchPartById.fulfilled, (state, action) => {
+        state.loading = false;
+        const existingIndex = state.parts.findIndex(p => p.id === action.payload.id);
+        if (existingIndex >= 0) {
+          state.parts[existingIndex] = action.payload;
+        } else {
+          state.parts.push(action.payload);
+        }
+        state.filteredParts = filterParts(state.parts, state.searchQuery, state.selectedCategory, state.selectedBrand);
+      })
+      .addCase(fetchPartById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Ошибка загрузки запчасти';
+      })
+      .addCase(fetchPartCategories.fulfilled, (state, action) => {
+        state.categories = action.payload;
+      })
+      .addCase(searchParts.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(searchParts.fulfilled, (state, action) => {
+        state.loading = false;
+        state.filteredParts = action.payload;
+      })
+      .addCase(searchParts.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Ошибка поиска запчастей';
+      })
+      .addCase(orderPart.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(orderPart.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(orderPart.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Ошибка заказа запчасти';
       });
   },
 });
@@ -138,5 +204,5 @@ const filterParts = (parts: Part[], searchQuery: string, category: string, brand
   });
 };
 
-export const { setSearchQuery, setSelectedCategory, setSelectedBrand, clearFilters } = partsSlice.actions;
+export const { setSearchQuery, setSelectedCategory, setSelectedBrand, clearFilters, clearError } = partsSlice.actions;
 export default partsSlice.reducer; 

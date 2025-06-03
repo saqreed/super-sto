@@ -1,73 +1,80 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { CartItem, Part } from '../../types';
+import { Part } from '../../types';
+
+interface CartItem {
+  part: Part;
+  quantity: number;
+}
 
 interface CartState {
   items: CartItem[];
-  totalAmount: number;
   totalItems: number;
+  totalPrice: number;
+  totalAmount: number;
 }
 
 const initialState: CartState = {
   items: [],
-  totalAmount: 0,
   totalItems: 0,
+  totalPrice: 0,
+  totalAmount: 0,
 };
 
 const calculateTotals = (items: CartItem[]) => {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalAmount = items.reduce((sum, item) => sum + (item.part.price * item.quantity), 0);
-  return { totalItems, totalAmount };
+  const totalPrice = items.reduce((sum, item) => sum + (item.part.price * item.quantity), 0);
+  return { totalItems, totalPrice };
 };
 
 const cartSlice = createSlice({
   name: 'cart',
   initialState,
   reducers: {
-    addToCart: (state, action: PayloadAction<Part>) => {
-      const existingItem = state.items.find(item => item.part.id === action.payload.id);
-      
+    addToCart: (state, action: PayloadAction<{ part: Part; quantity?: number }>) => {
+      const { part, quantity = 1 } = action.payload;
+      const existingItem = state.items.find(item => item.part.id === part.id);
+
       if (existingItem) {
-        existingItem.quantity += 1;
+        existingItem.quantity += quantity;
       } else {
-        state.items.push({
-          part: action.payload,
-          quantity: 1,
-        });
+        state.items.push({ part, quantity });
       }
-      
+
       const totals = calculateTotals(state.items);
-      state.totalAmount = totals.totalAmount;
       state.totalItems = totals.totalItems;
+      state.totalPrice = totals.totalPrice;
+      state.totalAmount = totals.totalPrice;
     },
-    
     removeFromCart: (state, action: PayloadAction<string>) => {
       state.items = state.items.filter(item => item.part.id !== action.payload);
       
       const totals = calculateTotals(state.items);
-      state.totalAmount = totals.totalAmount;
       state.totalItems = totals.totalItems;
+      state.totalPrice = totals.totalPrice;
+      state.totalAmount = totals.totalPrice;
     },
-    
     updateQuantity: (state, action: PayloadAction<{ partId: string; quantity: number }>) => {
-      const item = state.items.find(item => item.part.id === action.payload.partId);
-      
+      const { partId, quantity } = action.payload;
+      const item = state.items.find(item => item.part.id === partId);
+
       if (item) {
-        if (action.payload.quantity <= 0) {
-          state.items = state.items.filter(item => item.part.id !== action.payload.partId);
+        if (quantity <= 0) {
+          state.items = state.items.filter(item => item.part.id !== partId);
         } else {
-          item.quantity = action.payload.quantity;
+          item.quantity = quantity;
         }
       }
-      
+
       const totals = calculateTotals(state.items);
-      state.totalAmount = totals.totalAmount;
       state.totalItems = totals.totalItems;
+      state.totalPrice = totals.totalPrice;
+      state.totalAmount = totals.totalPrice;
     },
-    
     clearCart: (state) => {
       state.items = [];
-      state.totalAmount = 0;
       state.totalItems = 0;
+      state.totalPrice = 0;
+      state.totalAmount = 0;
     },
   },
 });

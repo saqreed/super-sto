@@ -1,217 +1,185 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../hooks/redux';
-import { fetchServices, fetchServiceStations } from '../store/slices/servicesSlice';
-import { 
-  WrenchScrewdriverIcon, 
-  ClockIcon, 
+import { useAppSelector } from '../hooks/redux';
+import TestConnection from '../components/TestConnection';
+import {
+  WrenchScrewdriverIcon,
+  SparklesIcon,
+  ClockIcon,
   ShieldCheckIcon,
-  MapPinIcon,
-  PhoneIcon
+  TrophyIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
 const HomePage: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const { services, serviceStations, loading } = useAppSelector(state => state.services);
-
-  useEffect(() => {
-    dispatch(fetchServices());
-    dispatch(fetchServiceStations());
-  }, [dispatch]);
+  const { isAuthenticated, user } = useAppSelector(state => state.auth);
 
   const features = [
     {
+      name: 'Профессиональный сервис',
+      description: 'Опытные мастера с многолетним стажем',
       icon: WrenchScrewdriverIcon,
-      title: 'Профессиональный сервис',
-      description: 'Опытные мастера с многолетним стажем работы'
     },
     {
+      name: 'Качественные запчасти',
+      description: 'Только оригинальные и сертифицированные детали',
+      icon: SparklesIcon,
+    },
+    {
+      name: 'Быстрое обслуживание',
+      description: 'Минимальное время ожидания',
       icon: ClockIcon,
-      title: 'Быстрое обслуживание',
-      description: 'Минимальное время ожидания, точное соблюдение сроков'
     },
     {
+      name: 'Гарантия качества',
+      description: 'Гарантия на все виды работ',
       icon: ShieldCheckIcon,
-      title: 'Гарантия качества',
-      description: 'Гарантия на все виды работ и запчасти'
-    }
+    },
+    {
+      name: 'Программа лояльности',
+      description: 'Скидки для постоянных клиентов',
+      icon: TrophyIcon,
+    },
+    {
+      name: 'Команда профессионалов',
+      description: 'Квалифицированные специалисты',
+      icon: UserGroupIcon,
+    },
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-primary-600 to-primary-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              СуперСТО
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 text-primary-100">
-              Современный сервис для комплексного обслуживания автомобилей
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/booking"
-                className="bg-white text-primary-600 hover:bg-gray-100 font-semibold py-3 px-8 rounded-lg transition-colors duration-200"
-              >
-                Записаться на обслуживание
-              </Link>
-              <Link
-                to="/parts"
-                className="border-2 border-white text-white hover:bg-white hover:text-primary-600 font-semibold py-3 px-8 rounded-lg transition-colors duration-200"
-              >
-                Каталог запчастей
-              </Link>
+      <div className="relative bg-white dark:bg-gray-800 overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <div className="relative z-10 pb-8 bg-white dark:bg-gray-800 sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32">
+            <main className="mt-10 mx-auto max-w-7xl px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
+              <div className="sm:text-center lg:text-left">
+                <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white sm:text-5xl md:text-6xl">
+                  <span className="block xl:inline">Добро пожаловать в</span>{' '}
+                  <span className="block text-blue-600 xl:inline">СуперСТО</span>
+                </h1>
+                <p className="mt-3 text-base text-gray-500 dark:text-gray-300 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
+                  Профессиональное обслуживание автомобилей. Записывайтесь онлайн и получайте качественный сервис от наших мастеров.
+                </p>
+                <div className="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
+                  <div className="rounded-md shadow">
+                    <Link
+                      to="/booking"
+                      className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 md:py-4 md:text-lg md:px-10"
+                    >
+                      Записаться на обслуживание
+                    </Link>
+                  </div>
+                  <div className="mt-3 sm:mt-0 sm:ml-3">
+                    <Link
+                      to="/parts"
+                      className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 md:py-4 md:text-lg md:px-10"
+                    >
+                      Каталог запчастей
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </main>
+          </div>
+        </div>
+        <div className="lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2">
+          <div className="h-56 w-full bg-gradient-to-r from-blue-400 to-blue-600 sm:h-72 md:h-96 lg:w-full lg:h-full flex items-center justify-center">
+            <div className="text-white text-center">
+              <WrenchScrewdriverIcon className="h-32 w-32 mx-auto mb-4" />
+              <p className="text-xl font-semibold">Ваш автомобиль в надежных руках</p>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Features Section */}
-      <section className="py-16 bg-white dark:bg-gray-900">
+      {/* Features */}
+      <div className="py-12 bg-white dark:bg-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+          <div className="lg:text-center">
+            <h2 className="text-base text-blue-600 font-semibold tracking-wide uppercase">
               Почему выбирают нас
             </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-300">
-              Мы предоставляем качественные услуги по обслуживанию автомобилей
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <div key={index} className="text-center">
-                <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <feature.icon className="h-8 w-8 text-primary-600 dark:text-primary-400" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  {feature.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Services Section */}
-      <section className="py-16 bg-gray-50 dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-              Наши услуги
-            </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-300">
-              Полный спектр услуг по обслуживанию и ремонту автомобилей
+            <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
+              Преимущества СуперСТО
             </p>
           </div>
 
-          {loading ? (
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto"></div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {services.map((service) => (
-                <div key={service.id} className="card p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                    {service.name}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300 mb-4">
-                    {service.description}
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">
-                      {service.price.toLocaleString()} ₽
-                    </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {service.duration} мин
-                    </span>
+          <div className="mt-10">
+            <div className="space-y-10 md:space-y-0 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-10 lg:grid-cols-3">
+              {features.map((feature) => (
+                <div key={feature.name} className="relative">
+                  <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-blue-500 text-white">
+                    <feature.icon className="h-6 w-6" aria-hidden="true" />
                   </div>
+                  <p className="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                    {feature.name}
+                  </p>
+                  <dd className="mt-2 ml-16 text-base text-gray-500 dark:text-gray-300">
+                    {feature.description}
+                  </dd>
                 </div>
               ))}
             </div>
-          )}
-
-          <div className="text-center mt-8">
-            <Link
-              to="/booking"
-              className="btn-primary"
-            >
-              Записаться на обслуживание
-            </Link>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Service Stations Section */}
-      <section className="py-16 bg-white dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-              Наши СТО
-            </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-300">
-              Удобное расположение по всему городу
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {serviceStations.map((station) => (
-              <div key={station.id} className="card p-6">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  {station.name}
-                </h3>
-                <div className="space-y-2 text-gray-600 dark:text-gray-300">
-                  <div className="flex items-center">
-                    <MapPinIcon className="h-5 w-5 mr-2" />
-                    <span>{station.address}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <PhoneIcon className="h-5 w-5 mr-2" />
-                    <span>{station.phone}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <ClockIcon className="h-5 w-5 mr-2" />
-                    <span>
-                      {station.workingHours.start} - {station.workingHours.end}
-                    </span>
-                  </div>
-                </div>
+      {/* User Greeting */}
+      {isAuthenticated && user && (
+        <div className="bg-blue-50 dark:bg-blue-900 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Добро пожаловать, {user.firstName || user.name || 'Пользователь'}!
+              </h2>
+              <p className="mt-2 text-gray-600 dark:text-gray-300">
+                Вы можете записаться на обслуживание или просмотреть каталог запчастей
+              </p>
+              <div className="mt-4 flex justify-center space-x-4">
+                <Link
+                  to="/profile"
+                  className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
+                >
+                  Мой профиль
+                </Link>
+                <Link
+                  to="/booking"
+                  className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700"
+                >
+                  Записаться
+                </Link>
               </div>
-            ))}
+            </div>
           </div>
         </div>
-      </section>
+      )}
+
+      {/* Test Connection */}
+      <div className="py-8 bg-gray-100 dark:bg-gray-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <TestConnection />
+        </div>
+      </div>
 
       {/* CTA Section */}
-      <section className="py-16 bg-primary-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Готовы обслужить ваш автомобиль?
+      <div className="bg-blue-600">
+        <div className="max-w-2xl mx-auto text-center py-16 px-4 sm:py-20 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
+            <span className="block">Готовы обслужить ваш автомобиль?</span>
           </h2>
-          <p className="text-xl text-primary-100 mb-8">
-            Запишитесь на обслуживание прямо сейчас или закажите необходимые запчасти
+          <p className="mt-4 text-lg leading-6 text-blue-200">
+            Записывайтесь на удобное время и получайте профессиональный сервис
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/booking"
-              className="bg-white text-primary-600 hover:bg-gray-100 font-semibold py-3 px-8 rounded-lg transition-colors duration-200"
-            >
-              Записаться на обслуживание
-            </Link>
-            <Link
-              to="/parts"
-              className="border-2 border-white text-white hover:bg-white hover:text-primary-600 font-semibold py-3 px-8 rounded-lg transition-colors duration-200"
-            >
-              Заказать запчасти
-            </Link>
-          </div>
+          <Link
+            to="/booking"
+            className="mt-8 w-full inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50 sm:w-auto"
+          >
+            Записаться сейчас
+          </Link>
         </div>
-      </section>
+      </div>
     </div>
   );
 };

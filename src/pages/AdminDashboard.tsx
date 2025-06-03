@@ -5,19 +5,21 @@ import { fetchRequests, updateRequestStatus } from '../store/slices/requestsSlic
 import { fetchServices, fetchServiceStations } from '../store/slices/servicesSlice';
 import { addNotification } from '../store/slices/notificationsSlice';
 import { RequestStatus, UserRole } from '../types';
-import AnalyticsDashboard from '../components/Analytics/AnalyticsDashboard';
+import AnalyticsDashboard from '../components/admin/AnalyticsDashboard';
+import LoyaltyDashboard from '../components/admin/LoyaltyDashboard';
 import { 
-  UsersIcon, 
-  BuildingStorefrontIcon, 
-  WrenchScrewdriverIcon,
+  UserIcon,
+  ClipboardDocumentListIcon,
+  CogIcon,
+  ChartBarIcon,
   CalendarDaysIcon,
-  ClockIcon,
+  ShoppingCartIcon,
+  UsersIcon,
+  WrenchScrewdriverIcon,
   CheckCircleIcon,
   XCircleIcon,
-  PencilIcon,
-  TrashIcon,
-  PlusIcon,
-  EyeIcon
+  EyeIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 
 const AdminDashboard: React.FC = () => {
@@ -310,7 +312,7 @@ const AdminDashboard: React.FC = () => {
             >
               <div className="flex items-center">
                 <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                  <BuildingStorefrontIcon className="h-6 w-6 text-orange-600 dark:text-orange-300" />
+                  <WrenchScrewdriverIcon className="h-6 w-6 text-orange-600 dark:text-orange-300" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-300">СТО</p>
@@ -330,7 +332,7 @@ const AdminDashboard: React.FC = () => {
               }}
             >
               <div className="flex items-center">
-                <ClockIcon className="h-8 w-8 text-yellow-500 mr-3" />
+                <CalendarDaysIcon className="h-8 w-8 text-yellow-500 mr-3" />
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Ожидают</p>
                   <p className="text-xl font-semibold text-gray-900 dark:text-white">{stats.pendingRequests}</p>

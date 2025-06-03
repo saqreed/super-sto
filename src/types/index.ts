@@ -10,9 +10,13 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   phone?: string;
   role: UserRole;
   avatar?: string;
+  loyaltyLevel?: 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
+  loyaltyPoints?: number;
   createdAt: Date;
 }
 

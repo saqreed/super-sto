@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { Notification } from '../../types';
+import { notificationsAPI } from '../../api/notifications';
 
 interface NotificationsState {
   notifications: Notification[];
@@ -17,56 +18,70 @@ const initialState: NotificationsState = {
 
 export const fetchNotifications = createAsyncThunk(
   'notifications/fetchNotifications',
-  async (userId: string) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const mockNotifications: Notification[] = [
-      {
-        id: '1',
-        userId,
-        title: 'Заявка принята',
-        message: 'Ваша заявка на замену масла принята в работу',
-        type: 'success',
-        read: false,
-        createdAt: new Date('2024-01-14T15:30:00'),
-      },
-      {
-        id: '2',
-        userId,
-        title: 'Напоминание о записи',
-        message: 'Завтра в 10:00 у вас запись на диагностику двигателя',
-        type: 'info',
-        read: false,
-        createdAt: new Date('2024-01-19T18:00:00'),
-      },
-      {
-        id: '3',
-        userId,
-        title: 'Заказ готов к выдаче',
-        message: 'Ваш заказ деталей готов к получению',
-        type: 'success',
-        read: true,
-        createdAt: new Date('2024-01-12T14:20:00'),
-      },
-    ];
-    
-    return mockNotifications;
+  async (params?: { page?: number; limit?: number }) => {
+    try {
+      return await notificationsAPI.getMy(params);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Ошибка загрузки уведомлений');
+    }
+  }
+);
+
+export const fetchUnreadNotifications = createAsyncThunk(
+  'notifications/fetchUnread',
+  async () => {
+    try {
+      return await notificationsAPI.getUnread();
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Ошибка загрузки непрочитанных уведомлений');
+    }
+  }
+);
+
+export const fetchUnreadCount = createAsyncThunk(
+  'notifications/fetchUnreadCount',
+  async () => {
+    try {
+      return await notificationsAPI.getUnreadCount();
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Ошибка получения количества уведомлений');
+    }
   }
 );
 
 export const markAsReadAsync = createAsyncThunk(
   'notifications/markAsRead',
   async (notificationId: string) => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    return notificationId;
+    try {
+      await notificationsAPI.markAsRead(notificationId);
+      return notificationId;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Ошибка отметки как прочитанное');
+    }
   }
 );
 
 export const markAllAsReadAsync = createAsyncThunk(
   'notifications/markAllAsRead',
-  async (userId: string) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return userId;
+  async () => {
+    try {
+      await notificationsAPI.markAllAsRead();
+      return true;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Ошибка отметки всех как прочитанные');
+    }
+  }
+);
+
+export const deleteNotification = createAsyncThunk(
+  'notifications/delete',
+  async (notificationId: string) => {
+    try {
+      await notificationsAPI.delete(notificationId);
+      return notificationId;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Ошибка удаления уведомления');
+    }
   }
 );
 
@@ -92,29 +107,45 @@ const notificationsSlice = createSlice({
         state.unreadCount = Math.max(0, state.unreadCount - 1);
       }
     },
-    markAllAsRead: (state, action: PayloadAction<string>) => {
-      const userId = action.payload;
+    markAllAsRead: (state) => {
       state.notifications.forEach(notification => {
-        if (notification.userId === userId && !notification.read) {
+        if (!notification.read) {
           notification.read = true;
         }
       });
       state.unreadCount = 0;
+    },
+    clearError: (state) => {
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
     builder
       .addCase(fetchNotifications.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(fetchNotifications.fulfilled, (state, action) => {
         state.loading = false;
-        state.notifications = action.payload;
-        state.unreadCount = action.payload.filter(n => !n.read).length;
+        const data = action.payload;
+        if (Array.isArray(data)) {
+          state.notifications = data;
+          state.unreadCount = data.filter(n => !n.read).length;
+        } else {
+          state.notifications = data.notifications || [];
+          state.unreadCount = data.unreadCount || 0;
+        }
       })
       .addCase(fetchNotifications.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Failed to fetch notifications';
+        state.error = action.error.message || 'Ошибка загрузки уведомлений';
+      })
+      .addCase(fetchUnreadNotifications.fulfilled, (state, action) => {
+        state.notifications = action.payload;
+        state.unreadCount = action.payload.length;
+      })
+      .addCase(fetchUnreadCount.fulfilled, (state, action) => {
+        state.unreadCount = action.payload;
       })
       .addCase(markAsReadAsync.fulfilled, (state, action) => {
         const notification = state.notifications.find(n => n.id === action.payload);
@@ -123,17 +154,19 @@ const notificationsSlice = createSlice({
           state.unreadCount = Math.max(0, state.unreadCount - 1);
         }
       })
-      .addCase(markAllAsReadAsync.fulfilled, (state, action) => {
-        const userId = action.payload;
+      .addCase(markAllAsReadAsync.fulfilled, (state) => {
         state.notifications.forEach(notification => {
-          if (notification.userId === userId && !notification.read) {
+          if (!notification.read) {
             notification.read = true;
           }
         });
         state.unreadCount = 0;
+      })
+      .addCase(deleteNotification.fulfilled, (state, action) => {
+        state.notifications = state.notifications.filter(n => n.id !== action.payload);
       });
   },
 });
 
-export const { addNotification, markAsRead, markAllAsRead } = notificationsSlice.actions;
+export const { addNotification, markAsRead, markAllAsRead, clearError } = notificationsSlice.actions;
 export default notificationsSlice.reducer; 

@@ -1,5 +1,5 @@
 import React from 'react';
-import LoyaltyDashboard from '../components/Loyalty/LoyaltyDashboard';
+import LoyaltyDashboard from '../components/admin/LoyaltyDashboard';
 
 const LoyaltyPage: React.FC = () => {
   return (
