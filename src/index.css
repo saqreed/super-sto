@@ -2,155 +2,228 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
-
 @layer base {
-  html {
-    font-family: 'Inter', 'Roboto', system-ui, sans-serif;
-  }
-  
   body {
-    @apply text-gray-900 dark:text-gray-100;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+      monospace;
+  }
+
+  /* Плавная прокрутка */
+  html {
+    scroll-behavior: smooth;
   }
 }
 
-@layer components {
-  .btn-primary {
-    @apply bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
-  }
-  
-  .btn-secondary {
-    @apply bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
-  }
+/* Кастомные стили для Ant Design */
+.ant-layout-header {
+  padding: 0 24px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.2s ease;
+}
 
-  .btn-danger {
-    @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
-  }
-  
-  .input-field {
-    @apply w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100;
-  }
-  
-  .card {
-    @apply bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700;
-  }
+.ant-layout-sider-collapsed .ant-menu-item-icon {
+  margin-right: 0;
+}
 
-  /* NavBar анимации */
-  .navbar-logo-glow {
-    @apply relative;
-  }
-  
-  .navbar-logo-glow::before {
-    content: '';
-    @apply absolute inset-0 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 opacity-0 transition-opacity duration-300;
-  }
-  
-  .navbar-logo-glow:hover::before {
-    @apply opacity-20;
-  }
+.ant-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.3s ease;
+}
 
-  .navbar-item-active {
-    @apply relative;
-  }
-  
-  .navbar-item-active::after {
-    content: '';
-    @apply absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-primary-500 rounded-full;
-  }
+.ant-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
 
-  .navbar-dropdown-enter {
-    @apply opacity-0 scale-95 translate-y-1;
-  }
-  
-  .navbar-dropdown-enter-active {
-    @apply opacity-100 scale-100 translate-y-0 transition-all duration-200 ease-out;
-  }
+.ant-btn {
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
 
-  .navbar-mobile-enter {
-    @apply opacity-0 translate-y-2;
-  }
-  
-  .navbar-mobile-enter-active {
-    @apply opacity-100 translate-y-0 transition-all duration-300 ease-out;
-  }
+.ant-input, .ant-select-selector {
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
 
-  .navbar-notification-pulse {
-    animation: navbar-pulse 2s infinite;
-  }
+.ant-input:focus, .ant-select-selector:focus {
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
 
-  @keyframes navbar-pulse {
-    0%, 100% {
-      @apply scale-100;
-    }
-    50% {
-      @apply scale-110;
-    }
-  }
+.ant-menu-item {
+  transition: all 0.2s ease;
+}
 
-  .navbar-button-hover {
-    @apply relative overflow-hidden;
-  }
-  
-  .navbar-button-hover::before {
-    content: '';
-    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent transform -skew-x-12 -translate-x-full transition-transform duration-700;
-  }
-  
-  .navbar-button-hover:hover::before {
-    @apply translate-x-full;
-  }
+.ant-menu-item:hover {
+  color: #1890ff !important;
+}
 
-  .navbar-glass {
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+/* Анимации */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-@layer utilities {
-  .animate-in {
-    animation-fill-mode: both;
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
   }
-  
-  .slide-in-from-top-2 {
-    animation: slide-in-from-top-2 0.2s ease-out;
-  }
-  
-  @keyframes slide-in-from-top-2 {
-    from {
-      opacity: 0;
-      transform: translateY(-8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  .fade-in {
-    animation: fade-in 0.3s ease-out;
-  }
-  
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-  
-  .scale-in {
-    animation: scale-in 0.2s ease-out;
-  }
-  
-  @keyframes scale-in {
-    from {
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Утилитарные классы для анимаций */
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.3s ease-out;
+}
+
+.animate-slideInLeft {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.3s ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 2s infinite;
+}
+
+/* Плавные переходы */
+.transition-all {
+  transition: all 0.2s ease;
+}
+
+.transition-colors {
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Hover эффекты */
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+/* Кастомные цвета */
+.text-primary {
+  color: #1890ff;
+}
+
+.bg-primary {
+  background-color: #1890ff;
+}
+
+.border-primary {
+  border-color: #1890ff;
+}
+
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+}
+
+/* Кастомные компоненты */
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(24, 144, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #1890ff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Кастомный скроллбар */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Адаптивные утилиты */
+@media (max-width: 768px) {
+  .mobile-hidden {
+    display: none !important;
+  }
+  
+  .mobile-full-width {
+    width: 100% !important;
+  }
+}
+
+/* Улучшенные фокус стили */
+.focus-visible:focus-visible {
+  outline: 2px solid #1890ff;
+  outline-offset: 2px;
+} 

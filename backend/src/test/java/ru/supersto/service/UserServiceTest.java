@@ -60,12 +60,12 @@ class UserServiceTest {
     }
 
     @Test
-    void findById_ExistingUser_ReturnsUser() {
+    void getUserById_ExistingUser_ReturnsUser() {
         // Arrange
         when(userRepository.findById("test-id")).thenReturn(Optional.of(testUser));
 
         // Act
-        User result = userService.findById("test-id");
+        User result = userService.getUserById("test-id");
 
         // Assert
         assertNotNull(result);
@@ -75,13 +75,13 @@ class UserServiceTest {
     }
 
     @Test
-    void findById_NonExistingUser_ThrowsException() {
+    void getUserById_NonExistingUser_ThrowsException() {
         // Arrange
         when(userRepository.findById("non-existing-id")).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class,
-                () -> userService.findById("non-existing-id"));
+                () -> userService.getUserById("non-existing-id"));
         verify(userRepository).findById("non-existing-id");
     }
 

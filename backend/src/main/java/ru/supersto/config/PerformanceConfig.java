@@ -19,13 +19,13 @@ import java.util.List;
 @EnableScheduling
 public class PerformanceConfig {
 
-    @Bean("taskExecutor")
-    public Executor taskExecutor() {
+    @Bean("performanceTaskExecutor")
+    public Executor performanceTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(5);
         executor.setMaxPoolSize(10);
         executor.setQueueCapacity(100);
-        executor.setThreadNamePrefix("SuperSTO-");
+        executor.setThreadNamePrefix("SuperSTO-Perf-");
         executor.initialize();
         return executor;
     }

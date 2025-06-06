@@ -200,10 +200,13 @@ public class ProductService {
                 .description(product.getDescription())
                 .price(product.getPrice())
                 .quantity(product.getQuantity())
+                .stockQuantity(product.getQuantity())
                 .category(product.getCategory())
                 .brand(product.getBrand())
                 .partNumber(product.getPartNumber())
                 .isActive(product.getIsActive())
+                .rating(4.5)
+                .reviewCount(0)
                 .inStock(product.getQuantity() > 0)
                 .lowStock(product.getQuantity() <= LOW_STOCK_THRESHOLD && product.getQuantity() > 0)
                 .build();

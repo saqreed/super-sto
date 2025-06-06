@@ -18,7 +18,7 @@ import ru.supersto.service.ServiceService;
 import java.util.List;
 
 @RestController
-@RequestMapping("/services")
+@RequestMapping("/api/services")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Услуги", description = "API для управления услугами автосервиса")

@@ -50,6 +50,10 @@ public class AppointmentService {
 
     public List<AppointmentDTO> findByCurrentClient() {
         User currentUser = userService.getCurrentUser();
+        // Для администратора возвращаем все записи
+        if (currentUser.getRole() == ru.supersto.entity.UserRole.ADMIN) {
+            return getAllAppointments();
+        }
         return findByClientId(currentUser.getId());
     }
 
@@ -72,20 +76,20 @@ public class AppointmentService {
 
     public AppointmentDTO createAppointment(AppointmentDTO appointmentDTO) {
         // Проверяем, что клиент существует
-        User client = userService.findById(appointmentDTO.getClientId());
+        User client = userService.getUserById(appointmentDTO.getClientId());
 
         // Проверяем, что услуга существует
         ru.supersto.entity.Service service = serviceService.findById(appointmentDTO.getServiceId());
 
         // Проверяем доступность мастера в указанное время (если мастер указан)
         if (appointmentDTO.getMasterId() != null) {
-            User master = userService.findById(appointmentDTO.getMasterId());
+            User master = userService.getUserById(appointmentDTO.getMasterId());
             validateMasterAvailability(appointmentDTO.getMasterId(), appointmentDTO.getAppointmentDate());
         }
 
         Appointment appointment = Appointment.builder()
                 .client(client)
-                .master(appointmentDTO.getMasterId() != null ? userService.findById(appointmentDTO.getMasterId())
+                .master(appointmentDTO.getMasterId() != null ? userService.getUserById(appointmentDTO.getMasterId())
                         : null)
                 .service(service)
                 .appointmentDate(appointmentDTO.getAppointmentDate())
@@ -124,7 +128,7 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Запись не найдена с ID: " + appointmentId));
 
-        User master = userService.findById(masterId);
+        User master = userService.getUserById(masterId);
 
         // Проверяем доступность мастера
         validateMasterAvailability(masterId, appointment.getAppointmentDate());

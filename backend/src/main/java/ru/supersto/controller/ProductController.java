@@ -1,11 +1,15 @@
 package ru.supersto.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -13,31 +17,61 @@ import org.springframework.web.bind.annotation.*;
 import ru.supersto.dto.ProductDTO;
 import ru.supersto.entity.ProductCategory;
 import ru.supersto.service.ProductService;
+import ru.supersto.util.Constants;
+import ru.supersto.util.ResponseUtils;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/products")
+@RequestMapping(Constants.ApiPaths.API_PREFIX + Constants.ApiPaths.PRODUCTS)
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Продукты", description = "API для управления каталогом продуктов и запчастей")
-@SecurityRequirement(name = "bearerAuth")
+@SecurityRequirement(name = "Bearer Authentication")
 public class ProductController {
 
     private final ProductService productService;
 
     @GetMapping
     @Operation(summary = "Получить все активные продукты")
-    public ResponseEntity<List<ProductDTO>> getAllActiveProducts() {
-        List<ProductDTO> products = productService.findAllActive();
-        return ResponseEntity.ok(products);
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Список продуктов получен"),
+            @ApiResponse(responseCode = "400", description = "Некорректные параметры")
+    })
+    public ResponseEntity<ResponseUtils.ApiResponse<List<ProductDTO>>> getAllActiveProducts(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String brand,
+            @RequestParam(required = false) String search) {
+
+        List<ProductDTO> products;
+
+        if (search != null && !search.trim().isEmpty()) {
+            products = productService.searchProducts(search);
+        } else if (category != null) {
+            try {
+                ProductCategory cat = ProductCategory.valueOf(category.toUpperCase());
+                products = productService.findByCategory(cat);
+            } catch (IllegalArgumentException e) {
+                return ResponseUtils.validationError("Неверная категория: " + category);
+            }
+        } else if (brand != null) {
+            products = productService.findByBrand(brand);
+        } else {
+            products = productService.findAllActive();
+        }
+
+        return ResponseUtils.success(products);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Получить продукт по ID")
-    public ResponseEntity<ProductDTO> getProductById(@PathVariable String id) {
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Продукт найден"),
+            @ApiResponse(responseCode = "404", description = "Продукт не найден")
+    })
+    public ResponseEntity<ResponseUtils.ApiResponse<ProductDTO>> getProductById(@PathVariable String id) {
         ProductDTO product = productService.findById(id);
-        return ResponseEntity.ok(product);
+        return ResponseUtils.success(product);
     }
 
     @GetMapping("/part-number/{partNumber}")

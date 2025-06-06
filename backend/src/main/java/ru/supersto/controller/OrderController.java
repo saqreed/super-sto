@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@RequestMapping("/orders")
+@RequestMapping("/api/orders")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Заказы", description = "API для управления заказами запчастей")
@@ -45,7 +45,7 @@ public class OrderController {
 
     @GetMapping("/my")
     @Operation(summary = "Получить заказы текущего клиента")
-    @PreAuthorize("hasRole('CLIENT')")
+    @PreAuthorize("hasRole('CLIENT') or hasRole('ADMIN')")
     public ResponseEntity<List<OrderDTO>> getMyOrders() {
         List<OrderDTO> orders = orderService.findByCurrentClient();
         return ResponseEntity.ok(orders);

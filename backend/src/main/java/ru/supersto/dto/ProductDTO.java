@@ -29,6 +29,9 @@ public class ProductDTO {
     @Min(value = 0, message = "Количество не может быть отрицательным")
     private Integer quantity;
 
+    // Алиас для фронтенда
+    private Integer stockQuantity;
+
     @NotNull(message = "Категория продукта обязательна")
     private ProductCategory category;
 
@@ -38,6 +41,10 @@ public class ProductDTO {
     private String partNumber;
 
     private Boolean isActive;
+
+    // Поля для рейтинга
+    private Double rating;
+    private Integer reviewCount;
 
     // Дополнительные поля для отображения
     private boolean inStock;

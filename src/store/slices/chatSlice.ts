@@ -1,29 +1,10 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { ChatMessage, SendMessageRequest } from '../../types';
 import { chatAPI } from '../../api/chat';
 
-interface ChatMessage {
-  id: string;
-  senderId: string;
-  receiverId: string;
-  content: string;
-  messageType: 'TEXT' | 'IMAGE' | 'FILE';
-  appointmentId?: string;
-  isRead: boolean;
-  sentAt: string;
-  senderName?: string;
-}
-
-interface Conversation {
-  otherUserId: string;
-  otherUserName: string;
-  lastMessage: ChatMessage;
-  unreadCount: number;
-}
-
 interface ChatState {
-  conversations: Conversation[];
-  currentConversation: ChatMessage[];
-  activeUserId: string | null;
+  conversations: any[];
+  messages: ChatMessage[];
   unreadCount: number;
   loading: boolean;
   error: string | null;
@@ -31,103 +12,41 @@ interface ChatState {
 
 const initialState: ChatState = {
   conversations: [],
-  currentConversation: [],
-  activeUserId: null,
+  messages: [],
   unreadCount: 0,
   loading: false,
   error: null,
 };
 
+export const fetchConversations = createAsyncThunk(
+  'chat/fetchConversations',
+  async () => {
+    const response = await chatAPI.getConversations();
+    return response.data;
+  }
+);
+
+export const fetchMessages = createAsyncThunk(
+  'chat/fetchMessages',
+  async (userId: string) => {
+    const response = await chatAPI.getConversation(userId);
+    return response.data;
+  }
+);
+
 export const sendMessage = createAsyncThunk(
   'chat/sendMessage',
-  async (messageData: {
-    receiverId: string;
-    content: string;
-    messageType?: string;
-    appointmentId?: string;
-  }) => {
-    try {
-      return await chatAPI.sendMessage(messageData);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка отправки сообщения');
-    }
-  }
-);
-
-export const fetchConversation = createAsyncThunk(
-  'chat/fetchConversation',
-  async (otherUserId: string) => {
-    try {
-      return await chatAPI.getConversation(otherUserId);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка загрузки переписки');
-    }
-  }
-);
-
-export const fetchConversationHistory = createAsyncThunk(
-  'chat/fetchConversationHistory',
-  async (params: { otherUserId: string; startDate: string; endDate: string }) => {
-    try {
-      return await chatAPI.getConversationHistory(params);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка загрузки истории переписки');
-    }
-  }
-);
-
-export const fetchMyChats = createAsyncThunk(
-  'chat/fetchMyChats',
-  async () => {
-    try {
-      return await chatAPI.getMyChats();
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка загрузки чатов');
-    }
-  }
-);
-
-export const fetchUnreadMessages = createAsyncThunk(
-  'chat/fetchUnreadMessages',
-  async () => {
-    try {
-      return await chatAPI.getUnreadMessages();
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка загрузки непрочитанных сообщений');
-    }
+  async (messageData: SendMessageRequest) => {
+    const response = await chatAPI.sendMessage(messageData);
+    return response.data;
   }
 );
 
 export const fetchUnreadCount = createAsyncThunk(
   'chat/fetchUnreadCount',
   async () => {
-    try {
-      return await chatAPI.getUnreadCount();
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка получения количества непрочитанных');
-    }
-  }
-);
-
-export const markMessageAsRead = createAsyncThunk(
-  'chat/markMessageAsRead',
-  async (messageId: string) => {
-    try {
-      return await chatAPI.markAsRead(messageId);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка отметки сообщения как прочитанное');
-    }
-  }
-);
-
-export const fetchAppointmentMessages = createAsyncThunk(
-  'chat/fetchAppointmentMessages',
-  async (appointmentId: string) => {
-    try {
-      return await chatAPI.getAppointmentMessages(appointmentId);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка загрузки сообщений по записи');
-    }
+    const response = await chatAPI.getUnreadCount();
+    return response.data;
   }
 );
 
@@ -135,112 +54,29 @@ const chatSlice = createSlice({
   name: 'chat',
   initialState,
   reducers: {
-    setActiveUser: (state, action) => {
-      state.activeUserId = action.payload;
-    },
-    clearCurrentConversation: (state) => {
-      state.currentConversation = [];
-      state.activeUserId = null;
-    },
-    addMessageToConversation: (state, action) => {
-      state.currentConversation.push(action.payload);
-    },
     clearError: (state) => {
       state.error = null;
     },
-    markConversationAsRead: (state, action) => {
-      const userId = action.payload;
-      state.currentConversation.forEach(message => {
-        if (message.senderId === userId) {
-          message.isRead = true;
-        }
-      });
+    addMessage: (state, action: PayloadAction<ChatMessage>) => {
+      state.messages.push(action.payload);
     },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(sendMessage.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+      .addCase(fetchConversations.fulfilled, (state, action) => {
+        state.conversations = action.payload;
       })
-      .addCase(sendMessage.fulfilled, (state, action) => {
-        state.loading = false;
-        state.currentConversation.push(action.payload);
+      .addCase(fetchMessages.fulfilled, (state, action: PayloadAction<ChatMessage[]>) => {
+        state.messages = action.payload;
       })
-      .addCase(sendMessage.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message || 'Ошибка отправки сообщения';
+      .addCase(sendMessage.fulfilled, (state, action: PayloadAction<ChatMessage>) => {
+        state.messages.push(action.payload);
       })
-      .addCase(fetchConversation.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchConversation.fulfilled, (state, action) => {
-        state.loading = false;
-        state.currentConversation = action.payload;
-      })
-      .addCase(fetchConversation.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message || 'Ошибка загрузки переписки';
-      })
-      .addCase(fetchConversationHistory.fulfilled, (state, action) => {
-        state.currentConversation = action.payload;
-      })
-      .addCase(fetchMyChats.fulfilled, (state, action) => {
-        // Преобразуем сообщения в список бесед
-        const conversationsMap = new Map<string, Conversation>();
-        
-        action.payload.forEach((message: ChatMessage) => {
-          const otherUserId = message.senderId === localStorage.getItem('currentUserId') 
-            ? message.receiverId 
-            : message.senderId;
-            
-          if (!conversationsMap.has(otherUserId)) {
-            conversationsMap.set(otherUserId, {
-              otherUserId,
-              otherUserName: message.senderName || 'Пользователь',
-              lastMessage: message,
-              unreadCount: message.isRead ? 0 : 1,
-            });
-          } else {
-            const conversation = conversationsMap.get(otherUserId)!;
-            if (new Date(message.sentAt) > new Date(conversation.lastMessage.sentAt)) {
-              conversation.lastMessage = message;
-            }
-            if (!message.isRead) {
-              conversation.unreadCount++;
-            }
-          }
-        });
-        
-        state.conversations = Array.from(conversationsMap.values());
-      })
-      .addCase(fetchUnreadMessages.fulfilled, (state, action) => {
-        // Обновляем счетчик непрочитанных
-        state.unreadCount = action.payload.length;
-      })
-      .addCase(fetchUnreadCount.fulfilled, (state, action) => {
+      .addCase(fetchUnreadCount.fulfilled, (state, action: PayloadAction<number>) => {
         state.unreadCount = action.payload;
-      })
-      .addCase(markMessageAsRead.fulfilled, (state, action) => {
-        const message = state.currentConversation.find(m => m.id === action.payload.id);
-        if (message) {
-          message.isRead = true;
-        }
-        state.unreadCount = Math.max(0, state.unreadCount - 1);
-      })
-      .addCase(fetchAppointmentMessages.fulfilled, (state, action) => {
-        state.currentConversation = action.payload;
       });
   },
 });
 
-export const { 
-  setActiveUser, 
-  clearCurrentConversation, 
-  addMessageToConversation, 
-  clearError,
-  markConversationAsRead 
-} = chatSlice.actions;
-
+export const { clearError, addMessage } = chatSlice.actions;
 export default chatSlice.reducer; 

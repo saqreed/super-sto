@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@RequestMapping("/appointments")
+@RequestMapping("/api/appointments")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Записи", description = "API для управления записями на обслуживание")
@@ -44,7 +44,7 @@ public class AppointmentController {
 
     @GetMapping("/my")
     @Operation(summary = "Получить записи текущего клиента")
-    @PreAuthorize("hasRole('CLIENT')")
+    @PreAuthorize("hasRole('CLIENT') or hasRole('ADMIN')")
     public ResponseEntity<List<AppointmentDTO>> getMyAppointments() {
         List<AppointmentDTO> appointments = appointmentService.findByCurrentClient();
         return ResponseEntity.ok(appointments);

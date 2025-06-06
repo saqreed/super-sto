@@ -12,15 +12,20 @@ spring:
       database: supersto
       auto-index-creation: true
   
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
-    timeout: 2000ms
-    lettuce:
-      pool:
-        max-active: 8
-        max-idle: 8
-        min-idle: 0
+  # Настройки кодировки
+  output:
+    ansi:
+      enabled: always
+  
+  # redis:
+  #   host: ${REDIS_HOST:localhost}
+  #   port: ${REDIS_PORT:6379}
+  #   timeout: 2000ms
+  #   lettuce:
+  #     pool:
+  #       max-active: 8
+  #       max-idle: 8
+  #       min-idle: 0
   
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
@@ -35,9 +40,13 @@ spring:
             enable: true
 
 server:
-  port: 8081
+  port: 8082
+  # Настройки кодировки сервера
   servlet:
-    context-path: /api
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 management:
   endpoints:
@@ -50,13 +59,22 @@ management:
 
 logging:
   level:
-    ru.supersto: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.data.mongodb: DEBUG
+    root: WARN
+    ru.supersto: INFO
+    ru.supersto.controller: INFO
+    ru.supersto.service: INFO
+    org.springframework.security: WARN
+    org.springframework.data.mongodb: WARN
+    org.springframework.web: WARN
+    org.springframework.aop: WARN
   pattern:
+    console: "%d{HH:mm:ss} %highlight(%-5level) %cyan(%logger{25}) : %msg%n"
     file: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
   file:
     name: logs/supersto-backend.log
+  charset:
+    console: UTF-8
+    file: UTF-8
 
 jwt:
   secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890123456789012345678901234567890}
@@ -64,13 +82,41 @@ jwt:
   refresh-expiration: 604800000 # 7 days
 
 app:
+  version: 1.0.0
+  name: SuperSTO Backend
+  description: API для платформы автосервиса СуперСТО
+  
   cors:
     allowed-origins: 
       - http://localhost:3000
       - http://localhost:3001
+      
   upload:
     path: ${UPLOAD_PATH:./uploads}
     max-file-size: 10MB
+    max-image-size: 5MB
+    allowed-image-types: image/jpeg,image/jpg,image/png,image/webp
+    allowed-document-types: application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    
+  security:
+    jwt:
+      access-token-validity: 86400000 # 24 часа
+      refresh-token-validity: 604800000 # 7 дней
+      
+  cache:
+    default-ttl: 3600 # 1 час
+    
+  pagination:
+    default-page-size: 10
+    max-page-size: 100
+    
+  notification:
+    max-age-days: 30
+    cleanup-enabled: true
+    
+  scheduler:
+    cleanup-enabled: true
+    health-check-enabled: true
 
 ---
 # Профиль для разработки

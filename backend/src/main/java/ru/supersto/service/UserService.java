@@ -2,6 +2,8 @@ package ru.supersto.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import ru.supersto.dto.UserProfileDTO;
@@ -15,9 +17,19 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class UserService {
+public class UserService extends BaseService<User, String> {
 
     private final UserRepository userRepository;
+
+    @Override
+    protected UserRepository getRepository() {
+        return userRepository;
+    }
+
+    @Override
+    protected String getEntityName() {
+        return "Пользователь";
+    }
 
     public User getCurrentUser() {
         return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -42,9 +54,8 @@ public class UserService {
         return mapToUserProfileDTO(updatedUser);
     }
 
-    public User findById(String id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден с ID: " + id));
+    public User getUserById(String id) {
+        return findByIdOrThrow(id);
     }
 
     public List<User> findAllActive() {
@@ -60,25 +71,25 @@ public class UserService {
     }
 
     public User updateUserRole(String userId, UserRole newRole) {
-        User user = findById(userId);
+        User user = findByIdOrThrow(userId);
         user.setRole(newRole);
-        User updatedUser = userRepository.save(user);
+        User updatedUser = update(user);
         log.info("Роль пользователя {} изменена на {}", user.getEmail(), newRole);
         return updatedUser;
     }
 
     public User deactivateUser(String userId) {
-        User user = findById(userId);
+        User user = findByIdOrThrow(userId);
         user.setIsActive(false);
-        User updatedUser = userRepository.save(user);
+        User updatedUser = update(user);
         log.info("Пользователь {} деактивирован", user.getEmail());
         return updatedUser;
     }
 
     public User activateUser(String userId) {
-        User user = findById(userId);
+        User user = findByIdOrThrow(userId);
         user.setIsActive(true);
-        User updatedUser = userRepository.save(user);
+        User updatedUser = update(user);
         log.info("Пользователь {} активирован", user.getEmail());
         return updatedUser;
     }

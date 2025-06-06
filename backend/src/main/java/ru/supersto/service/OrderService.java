@@ -38,6 +38,10 @@ public class OrderService {
 
     public List<OrderDTO> findByCurrentClient() {
         User currentUser = userService.getCurrentUser();
+        // Для администратора возвращаем все заказы
+        if (currentUser.getRole() == ru.supersto.entity.UserRole.ADMIN) {
+            return getAllOrders();
+        }
         return findByClientId(currentUser.getId());
     }
 

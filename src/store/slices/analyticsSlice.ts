@@ -1,60 +1,15 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { DashboardStats } from '../../types';
 import { analyticsAPI } from '../../api/analytics';
-
-interface DashboardStats {
-  totalClients: number;
-  totalMasters: number;
-  todayAppointments: number;
-  monthRevenue: number;
-  monthGrowth: number;
-  pendingOrders: number;
-  lowStockItems: number;
-  averageRating: number;
-  topServices: any[];
-  topMasters: any[];
-}
-
-interface RevenueStats {
-  totalRevenue: number;
-  periodStart: string;
-  periodEnd: string;
-  dailyRevenue: number[];
-  growthPercentage: number;
-}
-
-interface MasterPerformance {
-  masterId: string;
-  masterName: string;
-  completedAppointments: number;
-  revenue: number;
-  averageRating: number;
-  clientsServed: number;
-}
-
-interface ServicePopularity {
-  serviceId: string;
-  serviceName: string;
-  appointmentCount: number;
-  revenue: number;
-  averageRating: number;
-}
 
 interface AnalyticsState {
   dashboardStats: DashboardStats | null;
-  revenueStats: RevenueStats | null;
-  topMasters: MasterPerformance[];
-  topServices: ServicePopularity[];
-  masterPerformance: MasterPerformance | null;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: AnalyticsState = {
   dashboardStats: null,
-  revenueStats: null,
-  topMasters: [],
-  topServices: [],
-  masterPerformance: null,
   loading: false,
   error: null,
 };
@@ -62,88 +17,35 @@ const initialState: AnalyticsState = {
 export const fetchDashboardStats = createAsyncThunk(
   'analytics/fetchDashboardStats',
   async () => {
-    try {
-      return await analyticsAPI.getDashboard();
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка загрузки статистики дашборда');
-    }
-  }
-);
-
-export const fetchRevenueStats = createAsyncThunk(
-  'analytics/fetchRevenueStats',
-  async (params: { startDate: string; endDate: string }) => {
-    try {
-      return await analyticsAPI.getRevenue(params);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка загрузки статистики доходов');
-    }
-  }
-);
-
-export const fetchTodayRevenue = createAsyncThunk(
-  'analytics/fetchTodayRevenue',
-  async () => {
-    try {
-      return await analyticsAPI.getTodayRevenue();
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка загрузки дневного дохода');
-    }
-  }
-);
-
-export const fetchMonthRevenue = createAsyncThunk(
-  'analytics/fetchMonthRevenue',
-  async () => {
-    try {
-      return await analyticsAPI.getMonthRevenue();
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка загрузки месячного дохода');
-    }
-  }
-);
-
-export const fetchYearRevenue = createAsyncThunk(
-  'analytics/fetchYearRevenue',
-  async () => {
-    try {
-      return await analyticsAPI.getYearRevenue();
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка загрузки годового дохода');
-    }
-  }
-);
-
-export const fetchTopMasters = createAsyncThunk(
-  'analytics/fetchTopMasters',
-  async (limit: number = 10) => {
-    try {
-      return await analyticsAPI.getTopMasters({ limit });
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка загрузки топ мастеров');
-    }
-  }
-);
-
-export const fetchTopServices = createAsyncThunk(
-  'analytics/fetchTopServices',
-  async (limit: number = 10) => {
-    try {
-      return await analyticsAPI.getTopServices({ limit });
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка загрузки топ услуг');
-    }
-  }
-);
-
-export const fetchMasterPerformance = createAsyncThunk(
-  'analytics/fetchMasterPerformance',
-  async (params: { masterId: string; startDate: string; endDate: string }) => {
-    try {
-      return await analyticsAPI.getMasterPerformance(params);
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Ошибка загрузки производительности мастера');
-    }
+    const response = await analyticsAPI.getDashboardStats();
+    const backendData = response.data;
+    
+    // Мапинг полей между бэкендом и фронтендом
+    const mappedData: DashboardStats = {
+      totalClients: backendData.activeClients || 0,
+      totalMasters: backendData.totalMasters || 0,
+      todayAppointments: backendData.todayAppointments || 0,
+      monthRevenue: backendData.monthRevenue || 0,
+      monthGrowth: backendData.revenueGrowth || 0,
+      pendingOrders: backendData.pendingOrders || 0,
+      lowStockItems: backendData.lowStockProducts || 0,
+      averageRating: backendData.averageServiceRating || 0,
+      topServices: (backendData.topServices || []).map((service: any) => ({
+        serviceId: service.serviceId,
+        serviceName: service.serviceName,
+        count: service.totalBookings || 0,
+        revenue: service.totalRevenue || 0
+      })),
+      topMasters: (backendData.topMasters || []).map((master: any) => ({
+        masterId: master.masterId,
+        masterName: master.masterName,
+        appointmentCount: master.totalAppointments || 0,
+        averageRating: master.averageRating || 0,
+        revenue: master.totalRevenue || 0
+      }))
+    };
+    
+    return mappedData;
   }
 );
 
@@ -154,13 +56,6 @@ const analyticsSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
-    clearStats: (state) => {
-      state.dashboardStats = null;
-      state.revenueStats = null;
-      state.topMasters = [];
-      state.topServices = [];
-      state.masterPerformance = null;
-    },
   },
   extraReducers: (builder) => {
     builder
@@ -168,37 +63,16 @@ const analyticsSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchDashboardStats.fulfilled, (state, action) => {
+      .addCase(fetchDashboardStats.fulfilled, (state, action: PayloadAction<DashboardStats>) => {
         state.loading = false;
         state.dashboardStats = action.payload;
       })
       .addCase(fetchDashboardStats.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Ошибка загрузки статистики дашборда';
-      })
-      .addCase(fetchRevenueStats.fulfilled, (state, action) => {
-        state.revenueStats = action.payload;
-      })
-      .addCase(fetchTodayRevenue.fulfilled, (state, action) => {
-        state.revenueStats = action.payload;
-      })
-      .addCase(fetchMonthRevenue.fulfilled, (state, action) => {
-        state.revenueStats = action.payload;
-      })
-      .addCase(fetchYearRevenue.fulfilled, (state, action) => {
-        state.revenueStats = action.payload;
-      })
-      .addCase(fetchTopMasters.fulfilled, (state, action) => {
-        state.topMasters = action.payload;
-      })
-      .addCase(fetchTopServices.fulfilled, (state, action) => {
-        state.topServices = action.payload;
-      })
-      .addCase(fetchMasterPerformance.fulfilled, (state, action) => {
-        state.masterPerformance = action.payload;
+        state.error = action.error.message || 'Ошибка загрузки аналитики';
       });
   },
 });
 
-export const { clearError, clearStats } = analyticsSlice.actions;
+export const { clearError } = analyticsSlice.actions;
 export default analyticsSlice.reducer; 

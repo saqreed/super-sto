@@ -2,252 +2,309 @@ package ru.supersto.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import ru.supersto.dto.NotificationDTO;
-import ru.supersto.entity.*;
-import ru.supersto.exception.ResourceNotFoundException;
+import ru.supersto.entity.Notification;
+import ru.supersto.entity.NotificationType;
+import ru.supersto.entity.User;
 import ru.supersto.repository.NotificationRepository;
+import ru.supersto.util.Constants;
+import ru.supersto.util.DateUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.concurrent.CompletableFuture;
 
+/**
+ * Сервис для работы с уведомлениями
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class NotificationService {
+public class NotificationService extends BaseService<Notification, String> {
 
     private final NotificationRepository notificationRepository;
-    private final UserService userService;
 
-    public NotificationDTO createNotification(NotificationDTO notificationDTO) {
-        User recipient = userService.findById(notificationDTO.getRecipientId());
+    @Override
+    protected NotificationRepository getRepository() {
+        return notificationRepository;
+    }
 
+    @Override
+    protected String getEntityName() {
+        return "Уведомление";
+    }
+
+    /**
+     * Создать уведомление
+     */
+    @Async("notificationExecutor")
+    public CompletableFuture<Notification> createNotification(
+            User user, 
+            NotificationType type, 
+            String title, 
+            String message) {
+        
+        log.info("Создание уведомления для пользователя {}: {}", user.getEmail(), title);
+        
         Notification notification = Notification.builder()
-                .recipient(recipient)
-                .title(notificationDTO.getTitle())
-                .message(notificationDTO.getMessage())
-                .type(notificationDTO.getType())
-                .referenceId(notificationDTO.getReferenceId())
-                .referenceType(notificationDTO.getReferenceType())
-                .actionUrl(notificationDTO.getActionUrl())
-                .build();
-
+            .recipient(user)
+            .type(type)
+            .title(title)
+            .message(message)
+            .isRead(false)
+            .createdAt(DateUtils.nowInMoscow())
+            .build();
+        
         notification.prePersist();
-        Notification savedNotification = notificationRepository.save(notification);
-
-        log.info("Создано уведомление для пользователя {}: {}", recipient.getEmail(), notificationDTO.getTitle());
-
-        return mapToDTO(savedNotification);
+        Notification saved = save(notification);
+        
+        // Здесь можно добавить отправку push-уведомлений, email и т.д.
+        sendPushNotification(saved);
+        
+        return CompletableFuture.completedFuture(saved);
     }
 
-    public List<NotificationDTO> getMyNotifications() {
-        User currentUser = userService.getCurrentUser();
-
-        List<Notification> notifications = notificationRepository.findByRecipientIdOrderByCreatedAtDesc(
-                currentUser.getId());
-
-        return notifications.stream()
-                .filter(n -> !n.isExpired())
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+    /**
+     * Получить уведомления пользователя
+     */
+    public Page<Notification> getUserNotifications(User user, Pageable pageable) {
+        log.debug("Получение уведомлений для пользователя: {}", user.getEmail());
+        return notificationRepository.findByRecipientOrderByCreatedAtDesc(user, pageable);
     }
 
-    public List<NotificationDTO> getUnreadNotifications() {
-        User currentUser = userService.getCurrentUser();
-
-        List<Notification> notifications = notificationRepository.findByRecipientIdAndIsReadFalseOrderByCreatedAtDesc(
-                currentUser.getId());
-
-        return notifications.stream()
-                .filter(n -> !n.isExpired())
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
+    /**
+     * Получить непрочитанные уведомления пользователя
+     */
+    public List<Notification> getUnreadNotifications(User user) {
+        log.debug("Получение непрочитанных уведомлений для пользователя: {}", user.getEmail());
+        return notificationRepository.findByRecipientAndIsReadFalseOrderByCreatedAtDesc(user);
     }
 
-    public long getUnreadCount() {
-        User currentUser = userService.getCurrentUser();
-        return notificationRepository.countUnreadNotifications(currentUser.getId());
+    /**
+     * Получить количество непрочитанных уведомлений
+     */
+    public long getUnreadCount(User user) {
+        log.debug("Подсчет непрочитанных уведомлений для пользователя: {}", user.getEmail());
+        return notificationRepository.countByRecipientAndIsReadFalse(user);
     }
 
-    public NotificationDTO markAsRead(String notificationId) {
-        Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Уведомление не найдено с ID: " + notificationId));
-
-        User currentUser = userService.getCurrentUser();
-
-        // Только получатель может отметить уведомление как прочитанное
-        if (!notification.getRecipient().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("Вы можете отмечать как прочитанные только свои уведомления");
+    /**
+     * Отметить уведомление как прочитанное
+     */
+    public Notification markAsRead(String notificationId, User user) {
+        log.info("Отметка уведомления {} как прочитанного для пользователя {}", 
+            notificationId, user.getEmail());
+        
+        Notification notification = findByIdOrThrow(notificationId);
+        
+        // Проверяем, что уведомление принадлежит пользователю
+        if (!notification.getRecipient().getId().equals(user.getId())) {
+            throw new IllegalArgumentException("Уведомление не принадлежит пользователю");
         }
-
+        
         notification.markAsRead();
-        Notification updatedNotification = notificationRepository.save(notification);
-
-        log.info("Уведомление {} отмечено как прочитанное", notificationId);
-
-        return mapToDTO(updatedNotification);
+        
+        return update(notification);
     }
 
-    public void markAllAsRead() {
-        User currentUser = userService.getCurrentUser();
+    /**
+     * Отметить все уведомления как прочитанные
+     */
+    public void markAllAsRead(User user) {
+        log.info("Отметка всех уведомлений как прочитанных для пользователя: {}", user.getEmail());
+        
+        List<Notification> unreadNotifications = getUnreadNotifications(user);
+        
+        unreadNotifications.forEach(Notification::markAsRead);
+        
+        notificationRepository.saveAll(unreadNotifications);
+        log.info("Отмечено {} уведомлений как прочитанных", unreadNotifications.size());
+    }
 
-        List<Notification> unreadNotifications = notificationRepository
-                .findByRecipientIdAndIsReadFalseOrderByCreatedAtDesc(
-                        currentUser.getId());
-
-        for (Notification notification : unreadNotifications) {
-            notification.markAsRead();
-            notificationRepository.save(notification);
+    /**
+     * Удалить старые уведомления
+     */
+    public void deleteOldNotifications() {
+        log.info("Удаление старых уведомлений");
+        
+        LocalDateTime cutoffDate = DateUtils.nowInMoscow()
+            .minusDays(Constants.Limits.MAX_NOTIFICATION_AGE_DAYS);
+        
+        List<Notification> oldNotifications = notificationRepository
+            .findByCreatedAtBefore(cutoffDate);
+        
+        if (!oldNotifications.isEmpty()) {
+            notificationRepository.deleteAll(oldNotifications);
+            log.info("Удалено {} старых уведомлений", oldNotifications.size());
         }
-
-        log.info("Все уведомления пользователя {} отмечены как прочитанные", currentUser.getEmail());
     }
 
-    public void cleanupExpiredNotifications() {
-        notificationRepository.deleteExpiredNotifications(LocalDateTime.now());
-        log.info("Удалены истекшие уведомления");
+    /**
+     * Создать уведомление о новой записи
+     */
+    public CompletableFuture<Notification> createAppointmentNotification(
+            User user, 
+            String appointmentId, 
+            String serviceName, 
+            LocalDateTime appointmentTime) {
+        
+        String title = "Новая запись на услугу";
+        String message = String.format(
+            "Вы записались на услугу '%s' на %s", 
+            serviceName, 
+            DateUtils.formatDateTime(appointmentTime)
+        );
+        
+        return createNotificationWithReference(user, NotificationType.INFO, title, message, 
+            appointmentId, "APPOINTMENT");
     }
 
-    // Методы для создания типовых уведомлений
-
-    public void notifyAppointmentStatusChange(Appointment appointment) {
+    /**
+     * Создать уведомление об изменении статуса записи
+     */
+    public CompletableFuture<Notification> createAppointmentStatusNotification(
+            User user, 
+            String appointmentId, 
+            String status) {
+        
         String title = "Изменение статуса записи";
-        String message = String.format("Статус вашей записи на %s изменен на: %s",
-                appointment.getService().getName(),
-                getStatusText(appointment.getStatus()));
-
-        NotificationDTO notification = NotificationDTO.builder()
-                .recipientId(appointment.getClient().getId())
-                .title(title)
-                .message(message)
-                .type(NotificationType.INFO)
-                .referenceId(appointment.getId())
-                .referenceType("APPOINTMENT")
-                .actionUrl("/appointments/" + appointment.getId())
-                .build();
-
-        createNotification(notification);
-
-        // Эмуляция email (логирование)
-        simulateEmailNotification(appointment.getClient().getEmail(), title, message);
+        String message = String.format("Статус вашей записи изменен на: %s", status);
+        
+        return createNotificationWithReference(user, NotificationType.INFO, title, message, 
+            appointmentId, "APPOINTMENT");
     }
 
-    public void notifyOrderStatusChange(Order order) {
+    /**
+     * Создать уведомление о новом заказе
+     */
+    public CompletableFuture<Notification> createOrderNotification(
+            User user, 
+            String orderId, 
+            double totalAmount) {
+        
+        String title = "Новый заказ";
+        String message = String.format(
+            "Ваш заказ №%s на сумму %.2f руб. принят в обработку", 
+            orderId, 
+            totalAmount
+        );
+        
+        return createNotificationWithReference(user, NotificationType.SUCCESS, title, message, 
+            orderId, "ORDER");
+    }
+
+    /**
+     * Создать уведомление об изменении статуса заказа
+     */
+    public CompletableFuture<Notification> createOrderStatusNotification(
+            User user, 
+            String orderId, 
+            String status) {
+        
         String title = "Изменение статуса заказа";
-        String message = String.format("Статус вашего заказа #%s изменен на: %s",
-                order.getId().substring(0, 8),
-                getOrderStatusText(order.getStatus()));
-
-        NotificationDTO notification = NotificationDTO.builder()
-                .recipientId(order.getClient().getId())
-                .title(title)
-                .message(message)
-                .type(NotificationType.INFO)
-                .referenceId(order.getId())
-                .referenceType("ORDER")
-                .actionUrl("/orders/" + order.getId())
-                .build();
-
-        createNotification(notification);
-
-        // Эмуляция email
-        simulateEmailNotification(order.getClient().getEmail(), title, message);
+        String message = String.format("Статус заказа №%s изменен на: %s", orderId, status);
+        
+        return createNotificationWithReference(user, NotificationType.INFO, title, message, 
+            orderId, "ORDER");
     }
 
-    public void notifyNewReview(Review review) {
-        if (review.getMaster() != null) {
-            String title = "Новый отзыв";
-            String message = String.format("Вы получили новый отзыв с оценкой %d звезд за услугу '%s'",
-                    review.getRating(),
-                    review.getService().getName());
+    /**
+     * Создать системное уведомление
+     */
+    public CompletableFuture<Notification> createSystemNotification(
+            User user, 
+            String title, 
+            String message) {
+        
+        return createNotificationWithReference(user, NotificationType.INFO, title, message, 
+            null, "SYSTEM");
+    }
 
-            NotificationDTO notification = NotificationDTO.builder()
-                    .recipientId(review.getMaster().getId())
-                    .title(title)
-                    .message(message)
-                    .type(NotificationType.SUCCESS)
-                    .referenceId(review.getId())
-                    .referenceType("REVIEW")
-                    .actionUrl("/reviews/" + review.getId())
-                    .build();
+    /**
+     * Создать уведомление с ссылкой
+     */
+    @Async("notificationExecutor")
+    public CompletableFuture<Notification> createNotificationWithReference(
+            User user, 
+            NotificationType type, 
+            String title, 
+            String message,
+            String referenceId,
+            String referenceType) {
+        
+        log.info("Создание уведомления с ссылкой для пользователя {}: {}", user.getEmail(), title);
+        
+        Notification notification = Notification.builder()
+            .recipient(user)
+            .type(type)
+            .title(title)
+            .message(message)
+            .referenceId(referenceId)
+            .referenceType(referenceType)
+            .isRead(false)
+            .createdAt(DateUtils.nowInMoscow())
+            .build();
+        
+        notification.prePersist();
+        Notification saved = save(notification);
+        
+        sendPushNotification(saved);
+        
+        return CompletableFuture.completedFuture(saved);
+    }
 
-            createNotification(notification);
+    /**
+     * Отправить push-уведомление (заглушка)
+     */
+    @Async("notificationExecutor")
+    private void sendPushNotification(Notification notification) {
+        // TODO: Реализовать отправку push-уведомлений
+        log.debug("Push-уведомление отправлено: {}", notification.getTitle());
+    }
+
+    /**
+     * Получить уведомления по типу
+     */
+    public Page<Notification> getNotificationsByType(
+            User user, 
+            NotificationType type, 
+            Pageable pageable) {
+        
+        log.debug("Получение уведомлений типа {} для пользователя: {}", type, user.getEmail());
+        return notificationRepository.findByRecipientAndTypeOrderByCreatedAtDesc(user, type, pageable);
+    }
+
+    /**
+     * Удалить уведомление
+     */
+    public void deleteNotification(String notificationId, User user) {
+        log.info("Удаление уведомления {} пользователем {}", notificationId, user.getEmail());
+        
+        Notification notification = findByIdOrThrow(notificationId);
+        
+        // Проверяем, что уведомление принадлежит пользователю
+        if (!notification.getRecipient().getId().equals(user.getId())) {
+            throw new IllegalArgumentException("Уведомление не принадлежит пользователю");
+        }
+        
+        delete(notification);
+    }
+
+    /**
+     * Очистить истекшие уведомления
+     */
+    public void cleanupExpiredNotifications() {
+        log.info("Очистка истекших уведомлений");
+        
+        LocalDateTime now = DateUtils.nowInMoscow();
+        List<Notification> expiredNotifications = notificationRepository.findByExpiresAtBefore(now);
+        
+        if (!expiredNotifications.isEmpty()) {
+            notificationRepository.deleteAll(expiredNotifications);
+            log.info("Удалено {} истекших уведомлений", expiredNotifications.size());
         }
     }
-
-    public void notifyLowStock(Product product) {
-        // Уведомление для всех админов о низком остатке
-        List<User> admins = userService.findByRole(UserRole.ADMIN);
-
-        for (User admin : admins) {
-            String title = "Низкий остаток товара";
-            String message = String.format("Товар '%s' (арт. %s) заканчивается. Остаток: %d шт.",
-                    product.getName(),
-                    product.getPartNumber(),
-                    product.getQuantity());
-
-            NotificationDTO notification = NotificationDTO.builder()
-                    .recipientId(admin.getId())
-                    .title(title)
-                    .message(message)
-                    .type(NotificationType.WARNING)
-                    .referenceId(product.getId())
-                    .referenceType("PRODUCT")
-                    .actionUrl("/products/" + product.getId())
-                    .build();
-
-            createNotification(notification);
-        }
-    }
-
-    private void simulateEmailNotification(String email, String title, String message) {
-        // Эмуляция отправки email через логи (для пет проекта)
-        log.info("📧 EMAIL SIMULATION 📧");
-        log.info("To: {}", email);
-        log.info("Subject: {}", title);
-        log.info("Body: {}", message);
-        log.info("========================");
-    }
-
-    private String getStatusText(AppointmentStatus status) {
-        return switch (status) {
-            case PENDING -> "Ожидает подтверждения";
-            case CONFIRMED -> "Подтверждена";
-            case IN_PROGRESS -> "В процессе";
-            case COMPLETED -> "Завершена";
-            case CANCELLED -> "Отменена";
-            default -> "Неизвестно";
-        };
-    }
-
-    private String getOrderStatusText(OrderStatus status) {
-        return switch (status) {
-            case PENDING -> "Ожидает обработки";
-            case CONFIRMED -> "Подтверждён";
-            case SHIPPED -> "Отправлен";
-            case DELIVERED -> "Доставлен";
-            case CANCELLED -> "Отменён";
-            default -> "Неизвестно";
-        };
-    }
-
-    private NotificationDTO mapToDTO(Notification notification) {
-        return NotificationDTO.builder()
-                .id(notification.getId())
-                .recipientId(notification.getRecipient().getId())
-                .recipientName(
-                        notification.getRecipient().getFirstName() + " " + notification.getRecipient().getLastName())
-                .title(notification.getTitle())
-                .message(notification.getMessage())
-                .type(notification.getType())
-                .referenceId(notification.getReferenceId())
-                .referenceType(notification.getReferenceType())
-                .isRead(notification.getIsRead())
-                .actionUrl(notification.getActionUrl())
-                .createdAt(notification.getCreatedAt())
-                .readAt(notification.getReadAt())
-                .expiresAt(notification.getExpiresAt())
-                .build();
-    }
-}
+} 

@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@RequestMapping("/chat")
+@RequestMapping("/api/chat")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Чат", description = "API для системы чата")
@@ -30,6 +30,14 @@ public class ChatController {
     @Operation(summary = "Отправить сообщение")
     @PreAuthorize("hasRole('CLIENT') or hasRole('MASTER') or hasRole('ADMIN')")
     public ResponseEntity<ChatMessageDTO> sendMessage(@Valid @RequestBody ChatMessageDTO messageDTO) {
+        ChatMessageDTO sentMessage = chatService.sendMessage(messageDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(sentMessage);
+    }
+
+    @PostMapping("/messages")
+    @Operation(summary = "Отправить сообщение")
+    @PreAuthorize("hasRole('CLIENT') or hasRole('MASTER') or hasRole('ADMIN')")
+    public ResponseEntity<ChatMessageDTO> sendMessageAlias(@Valid @RequestBody ChatMessageDTO messageDTO) {
         ChatMessageDTO sentMessage = chatService.sendMessage(messageDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(sentMessage);
     }
@@ -57,6 +65,14 @@ public class ChatController {
     @Operation(summary = "Получить все мои чаты")
     @PreAuthorize("hasRole('CLIENT') or hasRole('MASTER') or hasRole('ADMIN')")
     public ResponseEntity<List<ChatMessageDTO>> getMyChats() {
+        List<ChatMessageDTO> chats = chatService.getMyChats();
+        return ResponseEntity.ok(chats);
+    }
+
+    @GetMapping("/conversations")
+    @Operation(summary = "Получить все мои переписки")
+    @PreAuthorize("hasRole('CLIENT') or hasRole('MASTER') or hasRole('ADMIN')")
+    public ResponseEntity<List<ChatMessageDTO>> getConversations() {
         List<ChatMessageDTO> chats = chatService.getMyChats();
         return ResponseEntity.ok(chats);
     }
@@ -92,4 +108,4 @@ public class ChatController {
         List<ChatMessageDTO> messages = chatService.getAppointmentMessages(appointmentId);
         return ResponseEntity.ok(messages);
     }
-} 
+}

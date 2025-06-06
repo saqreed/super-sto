@@ -214,7 +214,7 @@ public class ReviewService {
                 ru.supersto.entity.Service service = serviceService.findById(entityId);
                 return service.getName();
             } else if ("master".equals(entityType)) {
-                User master = userService.findById(entityId);
+                User master = userService.getUserById(entityId);
                 return master.getFirstName() + " " + master.getLastName();
             }
         } catch (Exception e) {
